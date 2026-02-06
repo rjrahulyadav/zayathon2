@@ -24,13 +24,14 @@ import {
 interface Registration {
   id: string;
   team_name: string;
-  team_members: Array<{ name: string; email: string }>;
+  team_members: Array<{ name: string; email: string; phone?: string; college?: string; year?: string; department?: string }>;
   contact_email: string;
   contact_phone: string;
   institution: string;
   year_of_study: string;
   department: string;
   problem_statement: string;
+  problem_domain: string;
   status: 'pending' | 'approved' | 'rejected';
   payment_screenshot?: string;
   created_at: string;
@@ -83,6 +84,10 @@ const Admin = () => {
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
   const [sendingEmail, setSendingEmail] = useState(false);
 
+  // Team Details Dialog State
+  const [showTeamDetailsDialog, setShowTeamDetailsDialog] = useState(false);
+  const [selectedTeamDetails, setSelectedTeamDetails] = useState<Registration | null>(null);
+
   // Email templates
   const templates = {
     selected: {
@@ -113,7 +118,8 @@ const Admin = () => {
     year_of_study: '',
     department: '',
     status: 'pending' as 'pending' | 'approved' | 'rejected',
-    problem_statement: ''
+    problem_statement: '',
+    problem_domain: ''
   });
 
   useEffect(() => {
@@ -181,12 +187,26 @@ const Admin = () => {
       
       if (result.success && result.data) {
         // Add status and problem_statement fields if they don't exist
-        const regs = result.data.map((r: any) => ({
-          ...r,
-          status: r.status || 'pending',
-          problem_statement: r.problem_statement || 'Not specified',
-          payment_screenshot: r.payment_screenshot || null
-        }));
+        // Also ensure team_members is properly parsed as JSON
+        const regs = result.data.map((r: any) => {
+          let teamMembers = r.team_members;
+          // Parse team_members if it's a string (JSON serialization issue)
+          if (typeof teamMembers === 'string') {
+            try {
+              teamMembers = JSON.parse(teamMembers);
+            } catch (e) {
+              console.error('Error parsing team_members:', e);
+              teamMembers = [];
+            }
+          }
+          return {
+            ...r,
+            team_members: teamMembers,
+            status: r.status || 'pending',
+            problem_statement: r.problem_statement || 'Not specified',
+            payment_screenshot: r.payment_screenshot || null
+          };
+        });
         console.log('Processed registrations:', regs);
         setRegistrations(regs as Registration[]);
       } else {
@@ -361,7 +381,8 @@ const Admin = () => {
       year_of_study: reg.year_of_study,
       department: reg.department || '',
       status: reg.status,
-      problem_statement: reg.problem_statement
+      problem_statement: reg.problem_statement,
+      problem_domain: reg.problem_domain || ''
     });
     setShowEditDialog(true);
   };
@@ -464,6 +485,11 @@ const Admin = () => {
     setEmailSubject('');
     setEmailBody('');
     setShowEmailDialog(true);
+  };
+
+  const handleViewTeamDetails = (reg: Registration) => {
+    setSelectedTeamDetails(reg);
+    setShowTeamDetailsDialog(true);
   };
 
   const handleSendSingleEmail = async () => {
@@ -720,13 +746,22 @@ const Admin = () => {
                                 <span className="font-medium">Phone:</span> {reg.contact_phone || '-'}
                               </p>
                               <p>
-                                <span className="font-medium">Members:</span> {reg.team_members?.length || 1}
+                                <span className="font-medium">Team Members:</span>{" "}
+                                {reg.team_members?.map((member, index) => (
+                                  <span key={index} className="inline-flex items-center">
+                                    {member.name}
+                                    {index < (reg.team_members?.length || 0) - 1 && ", "} 
+                                  </span>
+                                )) || '-'}
                               </p>
                               <p>
                                 <span className="font-medium">Year:</span> {reg.year_of_study || '-'}
                               </p>
                               <p>
                                 <span className="font-medium">Department:</span> {reg.department || '-'}
+                              </p>
+                              <p>
+                                <span className="font-medium">Problem Domain:</span> {reg.problem_domain || '-'}
                               </p>
                             </div>
                             <p className="text-sm text-muted-foreground mt-2">
@@ -828,6 +863,14 @@ const Admin = () => {
                                 )}
                               </Button>
                             )}
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => handleViewTeamDetails(reg)}
+                              className="w-full"
+                            >
+                              <Users className="w-4 h-4 mr-1" />Details
+                            </Button>
                             <Button 
                               size="sm" 
                               variant="outline" 
@@ -1178,6 +1221,114 @@ const Admin = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEditDialog(false)}>Cancel</Button>
             <Button onClick={handleSaveEdit}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Team Details Dialog */}
+      <Dialog open={showTeamDetailsDialog} onOpenChange={setShowTeamDetailsDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Team Details - {selectedTeamDetails?.team_name}
+            </DialogTitle>
+            <DialogDescription>
+              Complete team information including all team members
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTeamDetails && (
+            <div className="space-y-6">
+              {/* Team Overview */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <p className="text-sm text-muted-foreground">Team Name</p>
+                  <p className="font-semibold">{selectedTeamDetails.team_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Problem Domain</p>
+                  <p className="font-semibold">{selectedTeamDetails.problem_domain || 'Not specified'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <Badge variant={
+                    selectedTeamDetails.status === 'approved' ? 'default' :
+                    selectedTeamDetails.status === 'rejected' ? 'destructive' : 'secondary'
+                  }>
+                    {selectedTeamDetails.status}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Team Members Section */}
+              <div>
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Team Members ({selectedTeamDetails.team_members?.length || 0})
+                </h4>
+                <div className="space-y-3">
+                  {selectedTeamDetails.team_members?.map((member, index) => (
+                    <div key={index} className="border rounded-lg p-4 bg-card">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-sm">
+                            {index + 1}
+                          </div>
+                          <span className="font-semibold text-lg">{member.name}</span>
+                          {index === 0 && (
+                            <Badge variant="outline" className="text-xs">Team Leader</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Email:</span>
+                          <span>{member.email || '-'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Phone:</span>
+                          <span>{member.phone || '-'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">College:</span>
+                          <span>{member.college || '-'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Year:</span>
+                          <span>{member.year ? `${member.year} Year` : '-'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 md:col-span-2">
+                          <span className="text-muted-foreground">Department:</span>
+                          <span>{member.department || '-'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {!selectedTeamDetails.team_members?.length && (
+                    <p className="text-muted-foreground text-center py-4">No team members found</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Contact Info */}
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <h4 className="font-semibold mb-2">Contact Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Email:</span>
+                    <span className="ml-2">{selectedTeamDetails.contact_email}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Phone:</span>
+                    <span className="ml-2">{selectedTeamDetails.contact_phone || '-'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTeamDetailsDialog(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
