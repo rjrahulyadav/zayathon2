@@ -379,13 +379,13 @@ const Registration = () => {
                       <SelectItem value="CSE">CSE</SelectItem>
                       <SelectItem value="AIML">AIML</SelectItem>
                       <SelectItem value="CSD">CSD</SelectItem>
-                      <SelectItem value="CSBE">CSBE</SelectItem>
-                      <SelectItem value="IT">IT</SelectItem>
+                      <SelectItem value="CSBS">CSBE</SelectItem>
+                      <SelectItem value="SCE">IT</SelectItem>
                       <SelectItem value="ECE">ECE</SelectItem>
-                      <SelectItem value="BME">BME</SelectItem>
+                      <SelectItem value="IT">BME</SelectItem>
                       <SelectItem value="EEE">EEE</SelectItem>
-                      <SelectItem value="CIVIL">CIVIL</SelectItem>
-                      <SelectItem value="AIDS">AIDS</SelectItem>
+                      <SelectItem value="AIDS">CIVIL</SelectItem>
+                      <SelectItem value="CIVIL">AIDS</SelectItem>
                       <SelectItem value="MEC">MEC</SelectItem>
                       <SelectItem value="MECH">MECH</SelectItem>
                     </SelectContent>
